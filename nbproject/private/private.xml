@@ -1,31 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project-private xmlns="http://www.netbeans.org/ns/project-private/1">
-    <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="1">
-        <file>
-            <url>src/java/controler/LoginGoogleHandler.java</url>
-            <bookmark id="1">
-                <name/>
-                <line>139</line>
-                <key/>
-            </bookmark>
-        </file>
-    </editor-bookmarks>
-    <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
-        <group>
-            <file>file:/F:/sem%205/SWP/wed6/swp391_booking-main/src/java/controler/LogoutServlet.java</file>
-            <file>file:/F:/sem%205/SWP/wed6/swp391_booking-main/web/Login.jsp</file>
-            <file>file:/F:/sem%205/SWP/wed6/swp391_booking-main/web/forgot_password.jsp</file>
-            <file>file:/F:/sem%205/SWP/wed6/swp391_booking-main/web/Staff.jsp</file>
-            <file>file:/F:/sem%205/SWP/wed6/swp391_booking-main/web/otp.jsp</file>
-            <file>file:/F:/sem%205/SWP/wed6/swp391_booking-main/web/sign_in.jsp</file>
-            <file>file:/F:/sem%205/SWP/wed6/swp391_booking-main/web/Home.jsp</file>
-            <file>file:/F:/sem%205/SWP/wed6/swp391_booking-main/web/WEB-INF/web.xml</file>
-            <file>file:/F:/sem%205/SWP/wed6/swp391_booking-main/web/image/icon/banner.png</file>
-            <file>file:/F:/sem%205/SWP/wed6/swp391_booking-main/web/newjsp.jsp</file>
-            <file>file:/F:/sem%205/SWP/wed6/swp391_booking-main/src/java/controler/LoginGoogleHandler.java</file>
-            <file>file:/F:/sem%205/SWP/wed6/swp391_booking-main/web/list_dashboard.jsp</file>
-            <file>file:/F:/sem%205/SWP/wed6/swp391_booking-main/web/images/fav.png</file>
-            <file>file:/F:/sem%205/SWP/wed6/swp391_booking-main/web/sign_up.jsp</file>
-        </group>
-    </open-files>
+    <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
 </project-private>

@@ -4,7 +4,8 @@
  */
 package controler;
 
-import dal.AccountDAO;
+import dal.CustomerDAO;
+import dal.StaffDAO;
 import java.io.IOException;
 import java.io.PrintWriter;
 import jakarta.servlet.ServletException;
@@ -16,15 +17,17 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import model.Account;
+import model.Customer;
+import model.Staff;
 
 /**
  *
  * @author hoangduc
  */
 public class ForgotServlet extends HttpServlet {
-
-    AccountDAO acd = new AccountDAO();
+    
+    StaffDAO std = new StaffDAO();
+    CustomerDAO cud = new CustomerDAO();
 
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
@@ -64,7 +67,14 @@ public class ForgotServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        String action = request.getParameter("action");
+        if (!action.equals("staff")) {
+            action = "customer";
+        }
+        request.setAttribute("action", action);
         request.getRequestDispatcher("forgot_password.jsp").forward(request, response);
+        return;
+        
     }
 
     /**
@@ -78,40 +88,54 @@ public class ForgotServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        
         String username = request.getParameter("username");
-        String password = request.getParameter("password");
-        String repassword = request.getParameter("repassword");
+        request.setAttribute("username", username);
         String err = "";
-        if (!acd.checkAccountExist(username)) {
-            err = "Email này chưa tồn tại vui lòng kiểm tra lại email!!!";
-        } else {
-            if (acd.checkAccountExistWithGoogle(err)) {
-                err = "Email này đã đăng nhập với google";
+        HttpSession session = request.getSession();
+        String action = request.getParameter("action");
+        request.setAttribute("action", action);
+        if (action.equals("customer")) {
+//            Account ac = new Account(username);
+            if (cud.checkCustomerBan(username)) {
+                err = "Tài khoản này của bạn đã bị cấm";
             } else {
-                if (!password.equals(repassword)) {
-                    err = "Tài khoản và mật khẩu không trùng khớp";
+                if (cud.checkCustomerExistWithGoogle(username)) {
+                    err = "tài khoản này đã đăng kí với google nên không đổi mật khẩu được";
                 } else {
-                    if (!isValidString(password)) {
-                        err = "Mật khẩu từ 8 đến 20 kí tự bao gồm ít nhất chữ cái thường, chữ hoa, số";
-                    } else {
-                        err="???";
-                        //mã hóa mật khẩu
-                        String passwordMd5 = md5Hash(password);
-                        // đổi mk cho người dùng
-                        Account ac = new Account(username, passwordMd5,"3");
-                        HttpSession session = request.getSession();
-                        //
-                        session.setAttribute("account", ac);
-                        session.setAttribute("setpass", "setpass");
+                    if (cud.checkCustomerExist(username)) {
+                        session.setAttribute("username", username);
+                        session.setAttribute("setpass", "customer");
                         response.sendRedirect("otp");
                         return;
+                    } else {
+                        err = "tài khoản email này không tồn tại";
                     }
                 }
             }
+            request.setAttribute("err", err);
+            request.getRequestDispatcher("forgot_password.jsp").forward(request, response);
+        } // để đổi mật khẩu nếu là staff
+        else if (action.equals("staff")) {
+            if (std.checkStaffExist(username)) {
+                if (std.checkStaffBan(username)) {
+                    err = "tài khoản của bạn đã bị cấm";
+                } else {
+                    session.setAttribute("username", username);
+                    session.setAttribute("setpass", "staff");
+                    response.sendRedirect("otp");
+                    return;
+                }
+            } else {
+                err = "tài khoản email này không tồn tại";
+            }
+        } else {
+            // chưa có gì
+            err = "lỗi";
         }
-        request.setAttribute("username", username);
         request.setAttribute("err", err);
         request.getRequestDispatcher("forgot_password.jsp").forward(request, response);
+        
         return;
     }
 
@@ -121,31 +145,6 @@ public class ForgotServlet extends HttpServlet {
      * @return a String containing servlet description
      */
     // kiểm tra mật khẩu hợp lệ
-    public boolean isValidString(String str) {
-        // Sử dụng biểu thức chính quy để kiểm tra chuỗi
-        Pattern pattern = Pattern.compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,20}$");
-        Matcher matcher = pattern.matcher(str);
-        return matcher.matches();
-    }
-
-    // mã hóa mật khẩu
-    public String md5Hash(String input) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] messageDigest = md.digest(input.getBytes());
-
-            // Chuyển byte array thành dạng hex string
-            StringBuilder hexString = new StringBuilder();
-            for (byte b : messageDigest) {
-                hexString.append(String.format("%02x", b));
-            }
-            return hexString.toString();
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-            return null;
-        }
-    }
-
     @Override
     public String getServletInfo() {
         return "Short description";

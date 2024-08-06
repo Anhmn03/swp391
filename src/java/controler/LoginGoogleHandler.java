@@ -6,7 +6,7 @@ package controler;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import dal.AccountDAO;
+import dal.CustomerDAO;
 import java.io.IOException;
 import java.io.PrintWriter;
 import jakarta.servlet.ServletException;
@@ -16,8 +16,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import model.Account;
 import model.Constants;
+import model.Customer;
 import model.UserGoogleDto;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.fluent.Form;
@@ -29,7 +29,7 @@ import org.apache.http.client.fluent.Request;
  */
 public class LoginGoogleHandler extends HttpServlet {
 
-    AccountDAO acd = new AccountDAO();
+    CustomerDAO cud = new CustomerDAO();
 
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
@@ -109,45 +109,52 @@ public class LoginGoogleHandler extends HttpServlet {
 
             String err = "";
             // kiểm tra xem mail này đã tồn tại hay chưa
-            if (acd.checkAccountExist(mailUser)) {
-                // nếu tài khoản này đã tồn tại với google status = true thì đăng nhập
-                if (acd.checkAccountExistWithGoogle(mailUser)) {
-                    Account account = new Account(mailUser);
-                    session.setAttribute("account", account);
-                    request.getRequestDispatcher("Home.jsp").forward(request, response);
-                    return;
-                } else {
-                    //nếu là tài khoản là nhân viên hay admin thì không được đăng nhập với google
-                    String roleId = acd.getRoleId(mailUser);
-                    if (roleId.equals("3")) {
+            if (cud.checkCustomerBan(mailUser)) {
+                err = "Tài khoản này đã bị khóa";
+            } else {
+                if (cud.checkCustomerExist(mailUser)) {
+                    // nếu tài khoản này đã tồn tại với google status = true thì đăng nhập
+                    if (cud.checkCustomerExistWithGoogle(mailUser)) {
+                        // đẩy lên session customer có tên là accounts
+                        Customer account = cud.getCustomerByUsername(mailUser);
+                        session.setAttribute("account", account);
+                        // 
+                        response.sendRedirect("exploreshow");
+                        return;
+                    } else {
+                        //nếu là tài khoản là nhân viên hay admin thì không được đăng nhập với google
                         //nếu chưa liên kết với google thì sẽ update lại status và không cho login bằng mật khẩu
-                        if (acd.setAccountStatusWithGoogle(mailUser)) {
-                            Account account = new Account(mailUser);
+                        if (cud.setCustomerStatusWithGoogle(mailUser)) {
+                            Customer account = cud.getCustomerByUsername(mailUser);
                             session.setAttribute("account", account);
-                            request.getRequestDispatcher("Home.jsp").forward(request, response);
+                            // 
+                            response.sendRedirect("exploreshow");
                             return;
                         } else {
                             err = "không đăng nhập thành công 1";
                         }
-                    } else {
-                        err = "Bạn chỉ được đăng nhập bằng google với tư cách là khách hàng";
+
+                        request.setAttribute("err", err);
+                        request.getRequestDispatcher("sign_in.jsp").forward(request, response);
                     }
-                    request.setAttribute("err", err);
-                    request.getRequestDispatcher("sign_in.jsp").forward(request, response);
-                }
-            } else {
-                // nếu tài khoản này chưa tồn tại thì set nó đăng nhập với google 
-                boolean check = acd.addAccountGoogle(mailUser);
-                if (check) {
-                    Account account = new Account(mailUser);
-                    session.setAttribute("account", account);
-                    request.getRequestDispatcher("Home.jsp").forward(request, response);
                 } else {
-                    err = "không đăng nhập thành công";
-                    request.setAttribute("err", err);
-                    request.getRequestDispatcher("sign_in.jsp").forward(request, response);
+                    // nếu tài khoản này chưa tồn tại thì set nó đăng nhập với google 
+                    boolean check = cud.addCustomerGoogle(mailUser);
+                    if (check) {
+                        Customer account = cud.getCustomerByUsername(mailUser);
+                        session.setAttribute("account", account);
+                        // sửa
+                        response.sendRedirect("exploreshow");
+                    } else {
+                        err = "không đăng nhập thành công";
+                        request.setAttribute("err", err);
+                        request.getRequestDispatcher("sign_in.jsp").forward(request, response);
+                    }
                 }
             }
+            request.setAttribute("err", err);
+            request.getRequestDispatcher("sign_in.jsp").forward(request, response);
+            return;
         }
     }
 
@@ -167,38 +174,38 @@ public class LoginGoogleHandler extends HttpServlet {
         String password = request.getParameter("password");
         String passwordMd5 = md5Hash(password);
         String err = "";
-        if (acd.checkAccountExist(email, passwordMd5)) {
-            if (acd.checkAccountExistWithGoogle(email)) {
-                err = "Tài khoản này đã đăng nhập với googole, bạn hãy đăng nhập với google";
-            } else {
-                // nhay ve home
-                String roleId = acd.getRoleId(email);
-                Account account = new Account(email, passwordMd5, roleId);
-                session.setAttribute("account",account );
-
-                if (roleId.equals("1")) {
-                    response.sendRedirect("managerlist");
-                    return;
-                }else if(roleId.equals("2")){
-                    // link này đăng nhập của staff
-                    response.sendRedirect("Staff.jsp");
-                    return;
-                }
-                else {
-                    //link này đăng nhập của customer
-                    request.getRequestDispatcher("Home.jsp").forward(request, response);
-                }
-                return;
-            }
+        if (cud.checkCustomerBan(email)) {
+            err = "Tài khoản này của bạn đã bị khóa";
         } else {
-            err = "Tài khoản hoặc mật khẩu không chính xác!";
+            if (cud.checkCustomerExist(email, passwordMd5)) {
+                if (cud.checkStatusPassword(email)) {
+                    Customer ac = cud.getCustomerByUsername(email);
+                    session.setAttribute("account", ac);
+                    response.sendRedirect("changepassword?action=customer");
+                    return;
+                } else {
+                    if (cud.checkCustomerExistWithGoogle(email)) {
+                        err = "Tài khoản này đã đăng nhập với googole, bạn hãy đăng nhập với google";
+                    } else {
+                        // nhay ve home
+                        Customer account = cud.getCustomerByUsername(email);
+                        session.setAttribute("account", account);
+
+                        //link này đăng nhập của customer
+                        response.sendRedirect("exploreshow");
+                        return;
+                    }
+                }
+            } else {
+                err = "Tài khoản hoặc mật khẩu không chính xác!";
+            }
         }
         request.setAttribute("email", email);
         request.setAttribute("err", err);
         request.getRequestDispatcher("sign_in.jsp").forward(request, response);
     }
-
     // mã hóa mật khẩu
+
     public String md5Hash(String input) {
         try {
             MessageDigest md = MessageDigest.getInstance("MD5");

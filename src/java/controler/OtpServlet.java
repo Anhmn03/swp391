@@ -4,7 +4,8 @@
  */
 package controler;
 
-import dal.AccountDAO;
+import dal.CustomerDAO;
+import dal.StaffDAO;
 import java.io.IOException;
 import java.io.PrintWriter;
 import jakarta.servlet.ServletException;
@@ -12,7 +13,11 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import model.Account;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Random;
+import model.Customer;
+import model.Staff;
 
 /**
  *
@@ -20,8 +25,8 @@ import model.Account;
  */
 public class OtpServlet extends HttpServlet {
 
-    AccountDAO acd = new AccountDAO();
-
+    CustomerDAO cud = new CustomerDAO();
+    StaffDAO std = new StaffDAO();
     /**
      * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
      * methods.
@@ -62,15 +67,17 @@ public class OtpServlet extends HttpServlet {
             throws ServletException, IOException {
 
         HttpSession session = request.getSession();
-        // lấy account đã được đẩy lên session khi sign up
-        Account acc = (Account) session.getAttribute("account");
+        // lấy account đã được đẩy lên session 
+        String username = (String) session.getAttribute("username");
+
         //gửi mã otp
         SendEmail sm = new SendEmail();
         String code = sm.getRandom();
-        if (sm.sendEmail(acc.getUsername(), code)) {
+        String mess = "<p>Mã xác nhận là : " + code+"</p>";
+        if (sm.sendEmail(username, mess)) {
             session.setAttribute("code", code);
         } else {
-            String err = "k gui duoc code";
+            String err = "không gửi được code!!!";
             request.setAttribute("err", err);
         }
         request.getRequestDispatcher("otp.jsp").forward(request, response);
@@ -87,38 +94,64 @@ public class OtpServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        response.setCharacterEncoding("UTF-8");
         HttpSession session = request.getSession();
         // lấy account đã được đẩy lên session khi sign up
-        Account acc = (Account) session.getAttribute("account");
+        String username = (String) session.getAttribute("username");
         String code = (String) session.getAttribute("code");
         String err = "";
         // lấy otp mà khách hàng đăng nhập
         try {
             String otp = request.getParameter("otp");
             if (otp.equals(code)) {
+                session.removeAttribute("code");
+                String setpass = (String) session.getAttribute("setpass");
                 //nếu session này tồn tại thì sẽ đổi mật khẩu
-                if (session.getAttribute("setpass") != null) {
-                    if (acd.setPassWordAccount(acc.getUsername(), acc.getPassword())) {
-                        String role = acd.getRoleId(acc.getUsername());
-                        //kiểm tra vai trò để đăng nhập
-                        if (role.equals("2")) {
-                            response.sendRedirect("Staff.jsp");
-                            return;
-                        } else {
-                            response.sendRedirect("Home.jsp");
-                            return;
-                        }
+                if (setpass != null) {
 
+                    String passwordRandom = randomPassword();
+                    String passwordMd5 = md5Hash(passwordRandom);
+                    // 1 là status password : dùng để kiểm tra xem đây là đăg nhập lần đầu
+                    if (setpass.equals("customer")) {
+                        if (cud.setPassWordAccount(username, passwordMd5, "1")) {
+                            SendEmail sm = new SendEmail();
+                            String mess = "<p>Mật khẩu mới là: " + passwordRandom+"</p>";
+                            // gửi mật khẩu mới
+                            sm.sendEmail(username, mess);
+                            // xóa session account
+                            session.removeAttribute("username");
+                            response.sendRedirect("loginGoogleHandler");
+                        } else {
+                            err = "không cập nhật được mật khẩu";
+                        }
+                    } else if (setpass.equals("staff")) {
+                        /// lỗi
+                        if (std.setPassWordAccount(username, passwordMd5, "1")) {
+                            SendEmail sm = new SendEmail();
+                            String mess = "Mật khẩu mới là: " + passwordRandom;
+                            // gửi mật khẩu mới
+                            sm.sendEmail(username, mess);
+                            // xóa session account
+                            session.removeAttribute("username");
+                            response.sendRedirect("loginGoogleHandler");
+                        } else {
+                            err = "không cập nhật được mật khẩu";
+                        }
                     } else {
-                        err = "lỗi cài mật khẩu " + acc.getUsername();
+                        err="lỗi2" ;
+                        request.getRequestDispatcher("loginGoogleHandler").forward(request, response);
                     }
                 } else {// thêm tài khoản đăng kí  
-                    if (acd.addAccount(acc.getUsername(), acc.getPassword(), acc.getRoleid())) {
-                        response.sendRedirect("Home.jsp");
+                    Customer acc = (Customer) session.getAttribute("account") ;
+                    if (cud.addCustomer(acc.getUsername(), acc.getPassword(), "0", "0")) {
+                        Customer account = cud.getCustomerByUsername(acc.getUsername());
+                        session.setAttribute("account", account);
+                        // sửa
+                        response.sendRedirect("exploreshow");
                         return;
 
                     } else {
-                        err = "lỗi " + acc.getUsername();
+                        err = "lỗi " + acc.getUsername() +"    " + acc.getPassword();
                     }
                 }
             } else {
@@ -129,6 +162,37 @@ public class OtpServlet extends HttpServlet {
             return;
         } catch (Exception e) {
             System.out.println(e.getMessage());
+        }
+    }
+
+    public static String randomPassword() {
+        String characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        Random random = new Random();
+        StringBuilder stringBuilder = new StringBuilder(8);
+
+        for (int i = 0; i < 8; i++) {
+            int index = random.nextInt(characters.length());
+            stringBuilder.append(characters.charAt(index));
+        }
+
+        return stringBuilder.toString();
+    }
+
+    // mã hóa mật khẩu
+    public String md5Hash(String input) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            byte[] messageDigest = md.digest(input.getBytes());
+
+            // Chuyển byte array thành dạng hex string
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : messageDigest) {
+                hexString.append(String.format("%02x", b));
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+            return null;
         }
     }
 

@@ -15,10 +15,10 @@
         <meta name="viewport" content="width=device-width, shrink-to-fit=9">
         <meta name="description" content="Gambolthemes">
         <meta name="author" content="Gambolthemes">		
-        <title>TicketTicket - Hệ thống mua vé một cách dễ dàng</title>
-
-        <!-- Favicon Icon -->
-        <link rel="icon" type="image/png" href="images/fav.png">
+       <title>TicketTicket - Hệ thống mua vé một cách dễ dàng</title>
+		
+		<!-- Favicon Icon -->
+		<link rel="icon" type="image/png" href="images/fav.png">
 
 
         <!-- Stylesheets -->
@@ -50,7 +50,7 @@
                         <div class="row justify-content-center">
                             <div class="col-lg-10 col-md-10">
                                 <div class="app-top-items">
-                                    <a href="index.html">
+                                    <a href="exploreshow">
                                         <div class="sign-logo" id="logo">
                                             <img src="${pageContext.request.contextPath}/images/logo.svg" alt="">
                                             <img class="logo-inverse" src="images/dark-logo.svg" alt="">
@@ -95,7 +95,7 @@
                                             </div>
                                             <div>
                                                 <input type="checkbox" id="agreeTerms" name="agreeTerms" required>
-                                                <label for="agreeTerms">Tôi đã đọc và đồng ý với <a href="terms.html">chính sách bảo mật</a> và <a href="terms.html"> điều khoản .</label>
+                                                <label for="agreeTerms">Tôi đã đọc và đồng ý với <a href="terms.html">chính sách bảo mật</a> và <a href="terms.html"> điều khoản .</a></label>
                                             </div>
 
                                             <div class="col-lg-12 col-md-12">		
